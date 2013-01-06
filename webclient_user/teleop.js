@@ -1,13 +1,52 @@
-window.teleop = (function() {
+window.Teleop = (function() {
+	
+	var botIp = '192.168.1.101';
+	var ros;
+	
+	var kb = {
+			ARROW_LEFT : 37,
+			ARROW_UP : 38,
+			ARROW_RIGHT : 39,
+			ARROW_DOWN :40
+	};
+	
+	var pos = {
+			x : 0,
+			y : 0,
+			z : 0
+	}
 	
 	function setupEvents() {
-		
+		$(document).keydown(function(e) {
+			arrowAction(e.which);
+		})
 	}
 	
 	function setupConnection() {
-		var ros = new ROS('ws://localhost:9090');
-		ros.connect('ws://localhost:9090');
+		ros = new ROS();
+		ros.connect('ws://'+botIp+':9090');
+		ros.on('error', function(err) {
+			$('#errorLog').prepend($('<p>'+err+'</p>'));
+		})
 	}
+	
+	function getSysInfo() {
+		window.setInterval(function() {
+			var info = "hello world";
+			var dom = $('#rosSysinfo');
+			ros.getTopics(function(topics) {
+				$('#rosSysinfo .topics').html('' + topics);
+			});
+			ros.getServices(function(services) {
+				$('#rosSysinfo .services').html( '' + services);
+			});
+			ros.getParams(function(params) {
+				$('#rosSysinfo .params').html('' + params);
+			});
+			
+		}, 5000);
+	}
+	
 	
 	function callMove() {
 		// ros.Topic provides publish and subscribe support for a ROS topic.
@@ -20,14 +59,14 @@ window.teleop = (function() {
 		// ros.Message contains the data to publish.
 		var twist = new ros.Message({
 		  angular: {
-		    x: 1,
-		    y: 0,
-		    z: 0
+		    x: pos.x,
+		    y: pos.y,
+		    z: pos.z
 		  },
 		  linear: {
-		    x: 0,
-		    y: 0,
-		    z: 0
+		    x: pos.x,
+		    y: pos.y,
+		    z: pos.z
 		  }
 		});
 
@@ -37,27 +76,37 @@ window.teleop = (function() {
 	
 	function arrowAction(event) {
 		switch(event) {
-		case 37: //Arrow left
+		case kb.ARROW_LEFT: //Arrow left
+			$('#keyboardLog').prepend($("<p>Send Call: Turn Left.</p>"));
+			pos.z += 1;
+			break;
+		case kb.ARROW_RIGHT: //Arrow Right
+			$('#keyboardLog').prepend($("<p>Send Call: Turn Right.</p>"));
+			pos.z -= 1;
 			
 			break;
-		case 38: //Arrow Right
+		case kb.ARROW_UP: //Arrow Up
+			$('#keyboardLog').prepend($("<p>Send Call: Drive forward.</p>"));
+			pos.x += 0.5;
 			
 			break;
-		case 39: //Arrow Up
+		case kb.ARROW_DOWN: //Arrow Down
+			$('#keyboardLog').prepend($("<p>Send Call: Drive backward.</p>"));
 			
-			break;
-		case 40: //Arrow Down
-			
+			pos.x -= 0.5;
 			
 			break;
 		}
+		callMove();
 	}
 	
 	
 	return {
 		
 		init : function() {
-			
+			setupConnection();
+			getSysInfo();
+			setupEvents();
 			
 		}
 	
@@ -70,5 +119,5 @@ window.teleop = (function() {
 
 
 $(document).ready(function() {
-	init();
+	Teleop.init();
 });
