@@ -1,0 +1,16 @@
+<package>
+  <description brief="camera_sim">
+
+     camera_sim creates a video topic with random images
+     it publishes image_raw
+
+  </description>
+  <author>Stefan Weber</author>
+  <license>BSD</license>
+  <review status="unreviewed" notes=""/>
+  <url>http://ros.org/wiki/camera_sim</url>
+  <depend package="sensor_msgs"/>
+  <depend package="nodelet"/>
+</package>
+
+
