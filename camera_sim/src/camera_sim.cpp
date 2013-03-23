@@ -21,7 +21,7 @@ int main(int argc, char **argv)
     std_msgs::Header header;
     header.stamp = ros::Time::now();
     header.frame_id = "camera";
-    unsigned int seq = 0;
+    unsigned int seq = 0, color = 0;
 
     while (ros::ok())
     {
@@ -34,8 +34,15 @@ int main(int argc, char **argv)
         img->encoding = image_encodings::RGB8;
         img->is_bigendian = false;
         img->step = 640*3;
-        // This should resize the data vector to my image
-        img->data.resize(img->step * img->height);
+
+        img->data.resize(img->step * img->height, color%255);
+        for (unsigned int i=0; i<img->step * img->height; i++)
+        {
+            if (i%3==0) img->data[i] = color%255;
+            if (i%3==1) img->data[i] = (color+50)%255;
+            if (i%3==2) img->data[i] = (color+100)%255;
+        }
+        color+=10;
 
         pub.publish(img);
         ros::spinOnce();
