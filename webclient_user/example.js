@@ -14,21 +14,30 @@ ros.connect('ws://localhost:9090');
 // Subscribing to a Topic
 // ----------------------
 
-// Like when publishing a topic, we first create a Topic object with details of
-// the topic's node, name, and message type. Note that we can call publish or
-// subscribe on the same topic object.
-var listener = new ros.Topic({
+var info = new ros.Topic({
   name        : '/camera_info',
   messageType : 'sensor_msgs/CameraInfo'
 });
 
-// Then we add a callback to be called every time a message is published on this
-// topic.
-listener.subscribe(function(message) {
-  console.log('Received message on ' + listener.name + ': ' + message);
+info.subscribe(function(message) {
+  console.log('Received message on ' + info.name + ': ' + message.width + 'x' + message.height);
 
   // If desired, we can unsubscribe from the topic as well.
-  listener.unsubscribe();
+  info.unsubscribe();
 });
 
+var video = new ros.Topic({
+  name        : '/image_raw',
+  messageType : 'sensor_msgs/Image'
+});
+video.subscribe(function(message) {
+  console.log('Received message on ' + video.name + ': ' + message.width + 'x' + message.height + ' enc=' + message.encoding + ', step=' + message.step);
 
+  //var data=$.base64.encode(message.data);
+  var data = message.data;
+  $("#image").attr("src","data:image/bmp,"+data);
+
+
+  // If desired, we can unsubscribe from the topic as well.
+  video.unsubscribe();
+});
