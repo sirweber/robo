@@ -36,61 +36,16 @@
 #include "talk/xmpp/xmppthread.h"
 #include "talk/xmpp/xmppauth.h"
 #include "talk/xmpp/presenceouttask.h"
-#include "talk/base/logging.h"
 
-#include "presencepushtask.h"
+#include "talk/p2p/base/session.h"
 
-class Presence : public sigslot::has_slots<>
-{
+#include "Presence.h"
+#include "SessionManagement.h"
+
+class Login : public sigslot::has_slots<> {
 public:
-    Presence(buzz::XmppClient* xmpp_client):
-        m_xmpp_client(xmpp_client)
-    {}
-
-    int start()
-    {
-        // Set up debugging.
-        talk_base::LogMessage::LogToDebug(talk_base::LS_VERBOSE);
-
-        // Create a PresencePushTask object to retrieve presence information from the server.
-        // Create this first to avoid missing a notification received by the sign in process.
-        m_pushTask = new PresencePushTask(m_xmpp_client);
-
-        // Hook up to the notification signal sent when the stanza is received.
-        m_pushTask->SignalStatusUpdate.connect(this, &Presence::OnStatusUpdate);
-        // Start listening for presence stanzas.
-        m_pushTask->Start();
-
-        m_Presence_out = new buzz::PresenceOutTask(m_xmpp_client);
-        m_Status.set_jid(m_xmpp_client->jid());
-        m_Status.set_available(true);
-        m_Status.set_show(buzz::PresenceStatus::SHOW_ONLINE);
-
-        m_Presence_out->Send(m_Status);
-        m_Presence_out->Start();
-    }
-
-private:
-
-    // Status callbacks
-    void OnStatusUpdate(const buzz::PresenceStatus& status) {
-
-      if (status.available()) {
-         std::cout << status.jid().node() << " is available and ready to chat." << std::endl;
-      } else {
-        std::cout << status.jid().node() << " is no longer able to chat." << std::endl;
-      }
-    }
-
-    buzz::XmppClient* m_xmpp_client;
-    PresencePushTask* m_pushTask;
-    buzz::PresenceStatus m_Status;
-    buzz::PresenceOutTask* m_Presence_out;
-};
-
-class MyLoginClass : public sigslot::has_slots<> {
-public:
-  int Login(std::string username, std::string password) {
+  int DoLogin(std::string username, std::string password)
+  {
       // Not using SSL for now, since there is a problem with
       // using self-signed certificates
       //talk_base::InitializeSSL();
@@ -115,24 +70,22 @@ public:
       xcs.set_allow_plain(false);
       xcs.set_use_tls(buzz::TLS_DISABLED);
       xcs.set_pass(talk_base::CryptString(pass));
-      xcs.set_server(talk_base::SocketAddress("liteart.dyndns.org", 5222));
+
+      // TODO Server change
+      //xcs.set_server(talk_base::SocketAddress("liteart.dyndns.org", 5222));
+      xcs.set_server(talk_base::SocketAddress("localhost", 5222));
 
       talk_base::Thread* main_thread = talk_base::Thread::Current();
 
       // Sign up to receive signals from the XMPP pump to track sign in progress.
-      buzz::XmppPump pump;
-      pump.client()->SignalStateChange.connect(this, &MyLoginClass::OnStateChange);
+      m_pump.client()->SignalStateChange.connect(this, &Login::OnStateChange);
 
       // Queue up the sign in request.
-      pump.DoLogin(xcs, new buzz::XmppSocket(buzz::TLS_DISABLED), new XmppAuth());
+      m_pump.DoLogin(xcs, new buzz::XmppSocket(buzz::TLS_DISABLED), new XmppAuth());
 
-      // Signal our presence on the server
-      Presence p(pump.client());
-      p.start();
-
-      // Start the thread and run indefinitely.
+      // Start the thread and run indefinitely. This call blocks.
       main_thread->Run();
-      pump.DoDisconnect();
+      m_pump.DoDisconnect();
       return 0;
   }
 
@@ -151,20 +104,35 @@ public:
           //  Send your presence information.
           // and sign up to receive presence notifications.
           std::cout << "======>> Connection succeeded." << std::endl;
+
+          // Open a session
+          m_session.Init(m_pump.client());
+          // Signal our presence on the server
+          m_presence.Init(m_pump.client());
+
           break;
         case buzz::XmppEngine::STATE_CLOSED:
           //
           std::cout << "======>> Connection ended." << std::endl;
           break;
+      default:
+          //
+          std::cout << "======>> Unsupported Status Change." << std::endl;
+          break;
       }
   }
+
+private:
+  buzz::XmppPump m_pump;
+  SessionManagement m_session;
+  Presence m_presence;
 };
 
 int main(int argc, char **argv) {
     if (argc>2)
     {
-        MyLoginClass log;
-        return log.Login(argv[1], argv[2]);
+        Login log;
+        return log.DoLogin(argv[1], argv[2]);
     }
     else
     {
