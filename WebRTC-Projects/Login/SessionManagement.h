@@ -1,3 +1,4 @@
+#pragma once
 #include <iostream>
 
 #include <talk/base/sigslot.h>
@@ -48,7 +49,7 @@ public:
     void OnCallCreate(cricket::Call* call);
     void OnCallDestroy(cricket::Call* call);
     void OnDevicesChange();
-
+    cricket::MediaSessionClient* GetClient(){ return m_media_client; }
 
 private:
 

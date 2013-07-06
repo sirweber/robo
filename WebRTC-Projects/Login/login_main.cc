@@ -53,7 +53,6 @@ public:
       // Set up debugging.
       talk_base::LogMessage::LogToDebug(talk_base::LS_VERBOSE);
 
-      buzz::XmppClientSettings xcs;
       buzz::Jid jid;
       jid = buzz::Jid(username);
       if (!jid.IsValid() || jid.node() == "") {
@@ -64,16 +63,16 @@ public:
       talk_base::InsecureCryptStringImpl pass;
       pass.password() = password;
 
-      xcs.set_user(jid.node());
-      xcs.set_resource("telepresence");  // Arbitrary resource name.
-      xcs.set_host(jid.domain());
-      xcs.set_allow_plain(false);
-      xcs.set_use_tls(buzz::TLS_DISABLED);
-      xcs.set_pass(talk_base::CryptString(pass));
+      m_xcs.set_user(jid.node());
+      m_xcs.set_resource("telepresence");  // Arbitrary resource name.
+      m_xcs.set_host(jid.domain());
+      m_xcs.set_allow_plain(false);
+      m_xcs.set_use_tls(buzz::TLS_DISABLED);
+      m_xcs.set_pass(talk_base::CryptString(pass));
 
       // TODO Server change
       //xcs.set_server(talk_base::SocketAddress("liteart.dyndns.org", 5222));
-      xcs.set_server(talk_base::SocketAddress("localhost", 5222));
+      m_xcs.set_server(talk_base::SocketAddress("localhost", 5222));
 
       talk_base::Thread* main_thread = talk_base::Thread::Current();
 
@@ -81,7 +80,7 @@ public:
       m_pump.client()->SignalStateChange.connect(this, &Login::OnStateChange);
 
       // Queue up the sign in request.
-      m_pump.DoLogin(xcs, new buzz::XmppSocket(buzz::TLS_DISABLED), new XmppAuth());
+      m_pump.DoLogin(m_xcs, new buzz::XmppSocket(buzz::TLS_DISABLED), new XmppAuth());
 
       // Start the thread and run indefinitely. This call blocks.
       main_thread->Run();
@@ -108,7 +107,7 @@ public:
           // Open a session
           m_session.Init(m_pump.client());
           // Signal our presence on the server
-          m_presence.Init(m_pump.client());
+          m_presence.Init(m_pump.client(), &m_session, &m_xcs);
 
           break;
         case buzz::XmppEngine::STATE_CLOSED:
@@ -123,6 +122,7 @@ public:
   }
 
 private:
+  buzz::XmppClientSettings m_xcs;
   buzz::XmppPump m_pump;
   SessionManagement m_session;
   Presence m_presence;

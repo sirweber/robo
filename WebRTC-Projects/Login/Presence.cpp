@@ -7,8 +7,11 @@ Presence::~Presence()
     delete m_Presence_out;
 }
 
-void Presence::Init(buzz::XmppClient* xmpp_client)
+void Presence::Init(buzz::XmppClient* xmpp_client, SessionManagement* session, buzz::XmppClientSettings* client)
 {
+    m_Session = session;
+    m_Client = client;
+
     // Set up debugging.
     talk_base::LogMessage::LogToDebug(talk_base::LS_VERBOSE);
 
@@ -35,9 +38,27 @@ void Presence::OnStatusUpdate(const buzz::PresenceStatus& status) {
 
   if (status.available())
   {
-     std::cout << status.jid().node() << " is available and ready to chat." << std::endl;
+        std::cout << status.jid().node() << " is available and ready to chat." << std::endl;
 
-     // TODO Make connection
+        //if (status.jid().node() != m_Client->user())
+        if (m_Client->user() == "blyth")
+        {
+            // TODO Make connection
+            cricket::Call* call = m_Session->GetClient()->CreateCall();
+
+            cricket::CallOptions opt;
+            cricket::Session* session = call->InitiateSession(status.jid(), buzz::Jid(m_Client->user(), m_Client->host(), m_Client->resource()), opt);
+
+            cricket::SendDataParams params;
+            talk_base::Buffer payload("text", 5);
+            cricket::SendDataResult result;
+            bool sent = call->SendData(session, params, payload, &result);
+
+            // TODO
+            // Could not send data: no data channel.
+
+            std::cout << sent << std::endl;
+        }
   }
   else
   {
