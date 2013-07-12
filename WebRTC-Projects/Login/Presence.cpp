@@ -41,21 +41,46 @@ void Presence::OnStatusUpdate(const buzz::PresenceStatus& status) {
         std::cout << status.jid().node() << " is available and ready to chat." << std::endl;
 
         //if (status.jid().node() != m_Client->user())
-        if (m_Client->user() == "blyth")
+        if (m_Client->user() == "asmo")
         {
             // TODO Make connection
             cricket::Call* call = m_Session->GetClient()->CreateCall();
+            m_Session->GetClient()->SetFocus(call);
 
             cricket::CallOptions opt;
+            opt.has_data = true;
+            opt.has_audio = false;
+            opt.has_video = false;
             cricket::Session* session = call->InitiateSession(status.jid(), buzz::Jid(m_Client->user(), m_Client->host(), m_Client->resource()), opt);
+
+            if (!call || !session) {
+              std::cout << "Must be in a call to send data." << std::endl;
+              return;
+            }
+
+            if (!call->has_data()) {
+              std::cout << "This call doesn't have a data channel." << std::endl;
+              return;
+            }
+
+            const cricket::DataContentDescription* data =
+                cricket::GetFirstDataContentDescription(session->local_description());
+            if (!data) {
+              std::cout << "This call doesn't have a data content." << std::endl;
+              return;
+            }
+
+            cricket::StreamParams stream;
+            if (!cricket::GetStreamByIds(data->streams(), "", "", &stream)) {
+              std::cout << "Could not send data." << std::endl;
+              return;
+            }
+
 
             cricket::SendDataParams params;
             talk_base::Buffer payload("text", 5);
             cricket::SendDataResult result;
             bool sent = call->SendData(session, params, payload, &result);
-
-            // TODO
-            // Could not send data: no data channel.
 
             std::cout << sent << std::endl;
         }

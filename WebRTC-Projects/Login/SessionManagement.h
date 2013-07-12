@@ -13,6 +13,7 @@
 
 class SessionClientImpl : public cricket::SessionClient, public sigslot::has_slots<>
 {
+public:
     // Notifies the client of the creation / destruction of sessions of this type.
     //
     // IMPORTANT: The SessionClient, in its handling of OnSessionCreate, must
@@ -23,6 +24,10 @@ class SessionClientImpl : public cricket::SessionClient, public sigslot::has_slo
 
     // This is called when a Session is created (in- or outbound)
     void OnSessionCreate(cricket::Session* session, bool received_initiate);
+    void OnMediaStreamsUpdate(cricket::Call* call,
+                              cricket::Session* session,
+                              const cricket::MediaStreams& added,
+                              const cricket::MediaStreams& removed);
     void OnSessionDestroy(cricket::Session* session);
 
     bool ParseContent(cricket::SignalingProtocol protocol,
@@ -34,7 +39,9 @@ class SessionClientImpl : public cricket::SessionClient, public sigslot::has_slo
                               buzz::XmlElement** elem,
                               cricket::WriteError* error);
 
-    void OnSessionState(cricket::BaseSession* base_session, cricket::BaseSession::State state);
+    void OnSessionState(cricket::Call* call,
+                        cricket::Session* session,
+                        cricket::Session::State state);
 };
 
 class SessionManagement : public sigslot::has_slots<> {

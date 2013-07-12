@@ -1,14 +1,23 @@
 #include "SessionManagement.h"
 #include "NetworkManager.h"
 
-void SessionClientImpl::OnSessionState(cricket::BaseSession* base_session,
-                                        cricket::BaseSession::State state)
+void SessionClientImpl::OnSessionState(cricket::Call* call,
+                                       cricket::Session* session,
+                                       cricket::Session::State state)
 {
 
   std::cout << "OnSessionState: " << state << std::endl;
 
 }
+void SessionClientImpl::OnMediaStreamsUpdate(cricket::Call* call,
+                                             cricket::Session* session,
+                                             const cricket::MediaStreams& added,
+                                             const cricket::MediaStreams& removed)
+{
 
+  std::cout << "OnMediaStreamsUpdate" << std::endl;
+
+}
 /*Your implementation should determine whether the session represents an incoming or an outgoing
     connection request. If this is incoming, received_initiate will be True, and your application
     should connect to the Session's signals and perform any other session-specific tasks, such as
@@ -16,7 +25,7 @@ void SessionClientImpl::OnSessionState(cricket::BaseSession* base_session,
 void SessionClientImpl::OnSessionCreate(cricket::Session *session, bool received_initiate)
 {
     if (received_initiate) {
-      session->SignalState.connect(this, &SessionClientImpl::OnSessionState);
+
     }
     std::cout << "New session created!" << std::endl;
 }
@@ -91,8 +100,8 @@ void SessionManagement::Init(buzz::XmppClient* xmpp_client)
     // TODO also takes relay- and stun-server info in the ctor. not for now.
     m_port_allocator = new cricket::BasicPortAllocator(&network_manager);
     m_session_manager = new cricket::SessionManager(m_port_allocator, m_worker);
-    m_session_manager->SignalRequestSignaling.connect(this, &SessionManagement::OnRequestSignaling);
-    m_session_manager->SignalSessionCreate.connect(this, &SessionManagement::OnSessionCreate);
+    //m_session_manager->SignalRequestSignaling.connect(this, &SessionManagement::OnRequestSignaling);
+    //m_session_manager->SignalSessionCreate.connect(this, &SessionManagement::OnSessionCreate);
     m_session_manager->OnSignalingReady();
 
     m_session_manager_task = new cricket::SessionManagerTask(xmpp_client, m_session_manager);
@@ -138,6 +147,8 @@ void SessionManagement::OnSessionCreate(cricket::Session* session, bool initiate
 void SessionManagement::OnCallCreate(cricket::Call* call)
 {
     std::cerr << "SESSION CREATE" << std::endl;
+    call->SignalSessionState.connect(m_session_client, &SessionClientImpl::OnSessionState);
+    call->SignalMediaStreamsUpdate.connect(m_session_client, &SessionClientImpl::OnMediaStreamsUpdate);
 }
 void SessionManagement::OnCallDestroy(cricket::Call* call)
 {
